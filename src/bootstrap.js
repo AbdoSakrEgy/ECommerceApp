@@ -32,7 +32,7 @@ export const bootstrap = async () => {
     })
   );
   app.use(helmet());
-  app.use("api/v1", routeRouter);
+  app.use("/api/v1", routeRouter);
   app.use((err, req, res, next) => {
     return res
       .status(500)

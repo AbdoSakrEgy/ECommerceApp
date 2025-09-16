@@ -55,7 +55,7 @@ const salesSchema = new Schema(
     priceAfterDiscount: {
       type: Number,
       min: 0,
-      set: (value) => unitPrice - (this.unitPrice * this.unitDiscount) / 100,
+      set: (value) => originPrice - (this.originPrice * this.discount) / 100,
     },
     shippingCost: {
       type: Number,
@@ -103,6 +103,6 @@ const salesSchema = new Schema(
   }
 );
 
-const salesModel = model("sales", salesSchema);
+const salesModel = model("sales", salesSchema, "sales"); //3rd parameter to prevent mongoose to pluralize the collection name
 
 export default salesModel;

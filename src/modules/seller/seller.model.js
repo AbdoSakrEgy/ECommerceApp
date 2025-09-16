@@ -1,5 +1,7 @@
-import { Schema, model } from "mongoose";
-import { Role } from "../admin/admin.model";
+import { Schema, Types, model } from "mongoose";
+import { Gender, Role } from "../admin/admin.model.js";
+import { decrypt, encrypt } from "../../utils/crypto.js";
+import { hash } from "../../utils/bcrypt.js";
 
 const sellerSchema = new Schema(
   {
@@ -31,7 +33,7 @@ const sellerSchema = new Schema(
     },
     role: {
       type: String,
-      default: Role.admin,
+      default: Role.seller,
       enum: Object.values(Role),
     },
     // auth and OTP
@@ -76,7 +78,7 @@ const sellerSchema = new Schema(
       },
       expiresIn: Date,
     },
-    credentialsAt: Date,
+    credentialsChangedAt: Date,
     isActive: {
       type: Boolean,
       default: true,

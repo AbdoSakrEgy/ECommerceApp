@@ -1,6 +1,6 @@
 import { Schema, Types, model } from "mongoose";
-import { decrypt, encrypt } from "../../utils/crypto";
-import { hash } from "bcrypt";
+import { decrypt, encrypt } from "../../utils/crypto.js";
+import { hash } from "../../utils/bcrypt.js";
 export const Gender = {
   male: "male",
   female: "female",
@@ -88,7 +88,7 @@ const adminSchema = new Schema(
       },
       expiresIn: Date,
     },
-    credentialsAt: Date,
+    credentialsChangedAt: Date,
     isActive: {
       type: Boolean,
       default: true,

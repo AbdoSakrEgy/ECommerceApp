@@ -67,9 +67,9 @@ const productSchema = new Schema(
     priceAfterDiscount: {
       type: Number,
       min: 0,
-      set: (value) => unitPrice - (this.unitPrice * this.unitDiscount) / 100,
+      set: (value) => originPrice - (this.originPrice * this.discount) / 100,
     },
-    stock: { type: Number, default: 1, min: 1 },
+    stock: { type: Number, default: 0, min: 0 },
     productStatus: {
       type: String,
       enum: Object.values(ProductStatus),

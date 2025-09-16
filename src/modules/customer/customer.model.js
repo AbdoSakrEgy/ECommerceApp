@@ -1,5 +1,7 @@
-import { Schema, model } from "mongoose";
-import { Role } from "../admin/admin.model";
+import { Schema, Types, model } from "mongoose";
+import { Gender, Role } from "../admin/admin.model.js";
+import { decrypt, encrypt } from "../../utils/crypto.js";
+import { hash } from "../../utils/bcrypt.js";
 export const orderStatus = {
   pending: "pending",
   shipped: "shipped",
@@ -37,7 +39,7 @@ const customerSchema = new Schema(
     },
     role: {
       type: String,
-      default: Role.admin,
+      default: Role.customer,
       enum: Object.values(Role),
     },
     // auth and OTP
@@ -82,7 +84,7 @@ const customerSchema = new Schema(
       },
       expiresIn: Date,
     },
-    credentialsAt: Date,
+    credentialsChangedAt: Date,
     isActive: {
       type: Boolean,
       default: true,
@@ -90,34 +92,6 @@ const customerSchema = new Schema(
     deletedBy: {
       type: Types.ObjectId,
     },
-    // others
-    // orders: [
-    //   {
-    //     productId: {
-    //       type: Schema.Types.ObjectId,
-    //       ref: "product",
-    //       required: true,
-    //     },
-    //     quantity: {
-    //       type: Number,
-    //       required: true,
-    //       min: 1,
-    //     },
-    //     price: {
-    //       type: Number,
-    //       required: true,
-    //     },
-    //     status: {
-    //       type: String,
-    //       enum: Object.values(orderStatus),
-    //       default: orderStatus.pending,
-    //     },
-    //     orderedAt: {
-    //       type: Date,
-    //       default: Date.now,
-    //     },
-    //   },
-    // ],
     wishList: [
       {
         productId: {
