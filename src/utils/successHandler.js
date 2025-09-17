@@ -1,6 +1,6 @@
 export const successHandler = ({
   res,
-  message = "",
+  message = "Done",
   status = 200,
   result = {},
 }) => {

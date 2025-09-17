@@ -1,6 +1,7 @@
 import { Schema, Types, model } from "mongoose";
 import { decrypt, encrypt } from "../../utils/crypto.js";
 import { hash } from "../../utils/bcrypt.js";
+
 export const Gender = {
   male: "male",
   female: "female",
@@ -13,22 +14,22 @@ export const Role = {
 Object.freeze(Gender);
 Object.freeze(Role);
 
-const adminSchema = new Schema(
+const userSchema = new Schema(
   {
     // personal info
     firstName: {
       type: String,
-      required: true,
       trim: true,
       minlength: [3, "First name must be at least 3 characters"],
       maxlength: [20, "First name cannot exceed 20 characters"],
+      required: true,
     },
     lastName: {
       type: String,
-      required: true,
       trim: true,
       minlength: [3, "First name must be at least 3 characters"],
       maxlength: [20, "First name cannot exceed 20 characters"],
+      required: true,
     },
     age: Number,
     gender: {
@@ -43,8 +44,8 @@ const adminSchema = new Schema(
     },
     role: {
       type: String,
-      default: Role.admin,
       enum: Object.values(Role),
+      required: true,
     },
     // auth and OTP
     email: {
@@ -76,10 +77,10 @@ const adminSchema = new Schema(
     },
     password: {
       type: String,
-      required: true,
       min: 3,
       max: 20,
       set: (value) => hash(value),
+      required: true,
     },
     passwordOtp: {
       otp: {
@@ -96,7 +97,29 @@ const adminSchema = new Schema(
     deletedBy: {
       type: Types.ObjectId,
     },
-    // others
+    // others (customer)
+    wishList: [
+      {
+        productId: {
+          type: Schema.Types.ObjectId,
+          ref: "product",
+          required: true,
+        },
+        addedAt: {
+          type: Date,
+          default: Date.now,
+        },
+      },
+    ],
+    // others (seller)
+    totalSales: {
+      type: Number,
+      default: 0,
+    },
+    totalProducts: {
+      type: Number,
+      default: 0,
+    },
   },
   {
     timestamps: true,
@@ -105,6 +128,6 @@ const adminSchema = new Schema(
   }
 );
 
-const adminModel = model("admin", adminSchema);
+const userModel = model("user", userSchema);
 
-export default adminModel;
+export default userModel;

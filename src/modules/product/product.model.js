@@ -1,4 +1,5 @@
 import { Schema, Types, model } from "mongoose";
+
 const Category = {
   electronics: "electronics",
   fashion: "fashion",
