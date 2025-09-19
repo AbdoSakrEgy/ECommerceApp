@@ -31,7 +31,11 @@ const userSchema = new Schema(
       maxlength: [20, "First name cannot exceed 20 characters"],
       required: true,
     },
-    age: Number,
+    age: {
+      type: Number,
+      min: 18,
+      max: 200,
+    },
     gender: {
       type: String,
       default: Gender.male,
@@ -39,13 +43,18 @@ const userSchema = new Schema(
     },
     phone: {
       type: String,
+      trim: true,
+      validate: {
+        validator: (v) => /^\+?[1-9]\d{7,14}$/.test(v.replace(/[\s-]/g, "")),
+        message: (props) => `${props.value} is not a valid phone number!`,
+      },
       set: (value) => (value ? encrypt(value) : value),
       get: (value) => (value ? decrypt(value) : value),
     },
     role: {
       type: String,
       enum: Object.values(Role),
-      required: true,
+      default: Role.customer,
     },
     // auth and OTP
     email: {
@@ -56,7 +65,6 @@ const userSchema = new Schema(
     emailOtp: {
       otp: {
         type: String,
-        set: (value) => hash(value),
       },
       expiresIn: Date,
     },
@@ -67,7 +75,6 @@ const userSchema = new Schema(
     newEmailOtp: {
       otp: {
         type: String,
-        set: (value) => hash(value),
       },
       expiresIn: Date,
     },
@@ -79,13 +86,11 @@ const userSchema = new Schema(
       type: String,
       min: 3,
       max: 20,
-      set: (value) => hash(value),
       required: true,
     },
     passwordOtp: {
       otp: {
         type: String,
-        set: (value) => hash(value),
       },
       expiresIn: Date,
     },
@@ -97,7 +102,33 @@ const userSchema = new Schema(
     deletedBy: {
       type: Types.ObjectId,
     },
+    // others (admin)
     // others (customer)
+    cart: [
+      {
+        productId: {
+          type: Types.ObjectId,
+          ref: "product",
+          required: true,
+        },
+        quantity: {
+          type: Number,
+          min: 1,
+          default: 1,
+          required: true,
+        },
+      },
+    ],
+    orders: [
+      {
+        orderList: [
+          {
+            type: Types.ObjectId,
+            ref: "sales",
+          },
+        ],
+      },
+    ],
     wishList: [
       {
         productId: {
@@ -112,14 +143,14 @@ const userSchema = new Schema(
       },
     ],
     // others (seller)
-    totalSales: {
-      type: Number,
-      default: 0,
-    },
-    totalProducts: {
-      type: Number,
-      default: 0,
-    },
+    // totalSales: {
+    //   type: Number,
+    //   default: 0,
+    // },
+    // totalProducts: {
+    //   type: Number,
+    //   default: 0,
+    // },
   },
   {
     timestamps: true,
@@ -127,6 +158,23 @@ const userSchema = new Schema(
     toObject: { getters: true, virtuals: true },
   }
 );
+
+// Mongoose lifecycle
+userSchema.pre("save", async function (next) {
+  // only hash if it's new or modified
+  if (this.emailOtp?.otp && this.isModified("emailOtp.otp")) {
+    this.emailOtp.otp = await hash(this.emailOtp.otp);
+  }
+  if (this.newEmailOtp?.otp && this.isModified("newEmailOtp.otp")) {
+    this.newEmailOtp.otp = await hash(this.newEmailOtp.otp);
+  }
+  if (this.password && this.isModified("password")) {
+    this.password = await hash(this.password);
+  }
+  if (this.passwordOtp?.otp && this.isModified("passwordOtp.otp")) {
+    this.passwordOtp.otp = await hash(this.passwordOtp.otp);
+  }
+});
 
 const userModel = model("user", userSchema);
 

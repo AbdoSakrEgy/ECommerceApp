@@ -1,9 +1,9 @@
 import bcrypt from "bcrypt";
 
-export const hash = (plainText) => {
-  return bcrypt.hashSync(plainText, Number(process.env.SALAT));
+export const hash = async (plainText) => {
+  return await bcrypt.hash(plainText, Number(process.env.SALAT));
 };
 
-export const compare = (plainText, hashedText) => {
-  return bcrypt.compareSync(plainText, hashedText);
+export const compare = async (plainText, hashedText) => {
+  return await bcrypt.compare(plainText, hashedText);
 };

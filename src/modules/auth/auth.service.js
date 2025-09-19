@@ -13,7 +13,7 @@ import { compare } from "../../utils/bcrypt.js";
 export const register = async (req, res, next) => {
   const { firstName, lastName, age, gender, phone, role, email, password } =
     req.body;
-  // check: email not exist
+  // step: check email not exist
   const isUserExist = await findOne(userModel, { email });
   if (isUserExist) {
     return successHandler({ res, message: "User already exist", status: 400 });
@@ -71,10 +71,14 @@ export const register = async (req, res, next) => {
 // login
 export const login = async (req, res, next) => {
   const { email, password } = req.body;
-  // check: email existance
+  // step: check email existance
   const user = await findOne(userModel, { email });
   if (!user) {
     return successHandler({ res, message: "User not found", status: 404 });
+  }
+  // step: check password
+  if (!await compare(password, user.password)) {
+    return successHandler({ res, message: "Invalid credentials", status: 400 });
   }
   // step: create token
   const userPayload = {
@@ -124,8 +128,8 @@ export const refreshToken = async (req, res, next) => {
 export const confirmEmail = async (req, res, next) => {
   const user = req.user;
   const { firstOtp, secondOtp } = req.body;
-  // check: emailOtp
-  if (!compare(firstOtp, user.emailOtp.otp)) {
+  // step: check emailOtp
+  if (!await compare(firstOtp, user.emailOtp.otp)) {
     return successHandler({ res, message: "Invalid otp", status: 400 });
   }
   if (user.emailOtp.expiresIn < Date.now()) {
@@ -143,8 +147,8 @@ export const confirmEmail = async (req, res, next) => {
   }
   // step: case 2 email confrimed (confirm first and second email)
   if (user.emailConfirmed && secondOtp) {
-    // check: newEmailOtp
-    if (!compare(secondOtp, user.newEmailOtp.otp)) {
+    // step: check newEmailOtp
+    if (!await compare(secondOtp, user.newEmailOtp.otp)) {
       return successHandler({
         res,
         message: "Invalid otp for second email",
@@ -167,7 +171,7 @@ export const confirmEmail = async (req, res, next) => {
     );
     return successHandler({ res, message: "New email confirmed successfully" });
   }
-  // check: if emailConfirmed && !secondOtp
+  // step: check if emailConfirmed && !secondOtp
   if (user.emailConfirmed && !secondOtp) {
     return successHandler({
       res,
@@ -182,7 +186,7 @@ export const confirmEmail = async (req, res, next) => {
 export const updateEmail = async (req, res, next) => {
   const user = req.user;
   const { newEmail } = req.body;
-  // check: if email confirmed
+  // step: check if email confirmed
   if (!user.emailConfirmed) {
     return successHandler({
       res,
@@ -270,16 +274,114 @@ export const resendEmailOtp = async (req, res, next) => {
 };
 
 // updatePassword
-export const updatePassword = async (req, res, next) => {};
-
-// changePassword
-export const changePassword = async (req, res, next) => {};
+export const updatePassword = async (req, res, next) => {
+  const user = req.user;
+  const { oldPassword, newPassword } = req.body;
+  // step: check password correction
+  if (!await compare(oldPassword, user.password)) {
+    return successHandler({ res, message: "Invalid credentials", status: 400 });
+  }
+  // step: check newPassword not equal oldPassword
+  if (await compare(newPassword, user.password)) {
+    return successHandler({
+      res,
+      message: "You can not make new password equal to old password",
+      status: 400,
+    });
+  }
+  // step: update password and credentialsChangedAt
+  const updatedUser = await findOneAndUpdate(
+    userModel,
+    { email: user.email },
+    {
+      $set: {
+        password: newPassword,
+        credentialsChangedAt: Date.now(),
+      },
+    }
+  );
+  return successHandler({
+    res,
+    message: "Password updated successfully, please login again",
+  });
+};
 
 // forgetPassword
-export const forgetPassword = async (req, res, next) => {};
+export const forgetPassword = async (req, res, next) => {
+  const { email } = req.body;
+  // step: check email existance
+  const user = await findOne(userModel, { email });
+  if (!user) {
+    successHandler({ res, message: "User not found", status: 404 });
+  }
+  // step: send otp to email
+  const otpCode = createOtp();
+  const { isEmailSended, info } = await sendEmail({
+    to: email,
+    subject: "ECommerceApp",
+    html: template(otpCode, user.firstName, "Forget password"),
+  });
+  if (!isEmailSended) {
+    return successHandler({
+      res,
+      message: "Error while checking email",
+      status: 400,
+    });
+  }
+  // step: update passwordOtp
+  const updatedUser = await findOneAndUpdate(
+    userModel,
+    { email },
+    {
+      $set: {
+        "passwordOtp.otp": otpCode,
+        expiresIn: Date.now() + 60 * 60 * 60 * 1000,
+      },
+    }
+  );
+  return successHandler({
+    res,
+    message: "OTP sended to email, please use it to restart your password",
+  });
+};
 
-// resendPasswordOtp
-export const resendPasswordOtp = async (req, res, next) => {};
+// changePassword
+export const changePassword = async (req, res, next) => {
+  const { email, otp, newPassword } = req.body;
+  // step: check email existance
+  const user = await findOne(userModel, { email });
+  if (!user) {
+    successHandler({ res, message: "User not found", status: 404 });
+  }
+  // step: check otp
+  if (!await compare(otp, user.passwordOtp.otp)) {
+    return successHandler({ res, message: "Invalid otp", status: 400 });
+  }
+  // step: change password
+  const updatedUser = await findOneAndUpdate(
+    userModel,
+    { email },
+    {
+      $set: {
+        password: newPassword,
+      },
+    }
+  );
+  return successHandler({ res, message: "Password updated successfully" });
+};
 
 // logout
-export const logout = async (req, res, next) => {};
+export const logout = async (req, res, next) => {
+  const user = req.user;
+  // step: change credentialsChangedAt
+  const updatedUser = await findOneAndUpdate(
+    userModel,
+    { email: user.email },
+    {
+      $set: {
+        credentialsChangedAt: Date.now(),
+      },
+    }
+  );
+  return successHandler({ res, message: "Logged out successfully" });
+};

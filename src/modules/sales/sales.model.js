@@ -9,7 +9,7 @@ export const PaymentMethod = {
   googlePay: "googlePay",
 };
 export const SaleStatus = {
-  pending: "pending",
+  inProgress: "inProgress",
   completed: "completed",
   cancelled: "cancelled",
   refunded: "refunded",
@@ -93,8 +93,8 @@ const salesSchema = new Schema(
     deliveredAt: Date,
     cancelledAt: Date,
     completedAt: Date,
-    //! How to handle this case
-    // ammount: Number
+    //! How to handle this case if same products has sale just on 1 units and customer will buy 2 units
+    quantity: Number,
   },
   {
     timestamps: true,

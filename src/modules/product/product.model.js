@@ -1,6 +1,6 @@
 import { Schema, Types, model } from "mongoose";
 
-const Category = {
+export const Category = {
   electronics: "electronics",
   fashion: "fashion",
   home: "home",
@@ -9,7 +9,7 @@ const Category = {
   books: "books",
   other: "other",
 };
-const ProductStatus = {
+export const ProductStatus = {
   active: "active",
   outOfStock: "outOfStock",
   disCounted: "disCounted",
@@ -26,7 +26,7 @@ const productSchema = new Schema(
       maxlength: [100, "Product name cannot exceed 100 characters"],
       required: true,
     },
-    seller: {
+    sellerId: {
       type: Types.ObjectId,
       ref: "seller",
       required: true,
@@ -63,18 +63,13 @@ const productSchema = new Schema(
       min: 0,
       max: 5,
     },
-    originPrice: { type: Number, min: 0 },
+    originPrice: { type: Number, min: 0, required: true },
     discount: { type: Number, default: 0, min: 0, max: 100 },
-    priceAfterDiscount: {
-      type: Number,
-      min: 0,
-      set: (value) => originPrice - (this.originPrice * this.discount) / 100,
-    },
-    stock: { type: Number, default: 0, min: 0 },
+    stock: { type: Number, default: 1, min: 0 },
     productStatus: {
       type: String,
       enum: Object.values(ProductStatus),
-      required: true,
+      default: ProductStatus.active,
     },
     createdBy: {
       type: Types.ObjectId,
@@ -84,7 +79,6 @@ const productSchema = new Schema(
     updatedBy: {
       type: Types.ObjectId,
       ref: "seller" || "admin",
-      required: true,
     },
   },
   {
@@ -93,6 +87,10 @@ const productSchema = new Schema(
     toObject: { getters: true, virtuals: true },
   }
 );
+
+productSchema.virtual("priceAfterDiscount").get(function () {
+  return this.originPrice - (this.originPrice * this.discount) / 100;
+});
 
 const productModel = model("product", productSchema);
 
