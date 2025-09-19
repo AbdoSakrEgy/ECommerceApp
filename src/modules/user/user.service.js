@@ -2,10 +2,12 @@ import {
   create,
   find,
   findOne,
+  findOneAndDelete,
   findOneAndUpdate,
 } from "../../DB/db.services.js";
 import { successHandler } from "../../utils/successHandler.js";
 import productModel, { ProductStatus } from "../product/product.model.js";
+import salesModel from "../sales/sales.model.js";
 import userModel from "./user.model.js";
 
 // ==================== admin,customer,seller ====================
@@ -141,7 +143,36 @@ export const deleteCart = async (req, res, next) => {
 };
 
 // createOrder
-export const createOrder = async (req, res, next) => {};
+export const createOrder = async (req, res, next) => {
+  const user = req.user;
+  const { shippingCost, paymentMethod, trackingNumber } = req.body;
+  const { street, city, state, zipCode, country } = req.body;
+  const cart = user.cart;
+  // step: handle payment process
+  
+  // step: handle sales process
+  for (const prodInCart of cart) {
+    const product = await findOne(productModel, { _id: prodInCart.prodInCart });
+    const order = await create(salesModel, {
+      productId: product.productId,
+      customerId: user._id,
+      sellerId: product.sellerId,
+      productName: product.name,
+      originPrice: product.originPrice,
+      discount: product.discount,
+      shippingCost,
+      paymentMethod,
+      shippingAddress: { street, city, state, zipCode, country },
+      trackingNumber,
+      quantity: prodInCart.quantity,
+    });
+  }
+  return successHandler({
+    res,
+    message: `Your order is recieved successfully, orderId:${order._id}`,
+    result: { orderInfo: order },
+  });
+};
 
 // ==================== seller ====================
 // createMyProduct
@@ -155,8 +186,27 @@ export const createMyProduct = async (req, res, next) => {
     subCategory,
     description,
     images,
-    stock,
+    stock = 1,
   } = req.body;
+  // step: check if seller has product
+  // step: if true
+  const isSellerHasProduct = await findOne(productModel, {
+    name,
+    sellerId: user._id,
+  });
+  if (isSellerHasProduct) {
+    const updatedProduct = await findOneAndUpdate(
+      productModel,
+      { name, sellerId: user._id },
+      { $set: { stock: isSellerHasProduct.stock + stock } }
+    );
+    return successHandler({
+      res,
+      message: "Product added successfully",
+      result: updatedProduct,
+    });
+  }
+  // step: if false
   const product = await create(productModel, {
     name,
     category,
@@ -215,7 +265,7 @@ export const updateMyProduct = async (req, res, next) => {
     return successHandler({ res, message: "Product not found", status: 404 });
   }
   // step: update
-  await findOneAndUpdate(
+  const updatedProduct = await findOneAndUpdate(
     productModel,
     {
       _id: id,
@@ -232,8 +282,40 @@ export const updateMyProduct = async (req, res, next) => {
       updatedBy: user._id,
     }
   );
-  return successHandler({ res, message: "Product updated successfully" });
+  return successHandler({
+    res,
+    message: "Product updated successfully",
+    result: updatedProduct,
+  });
 };
 
 // deleteMyProduct
-export const deleteMyProduct = async (req, res, next) => {};
+export const deleteMyProduct = async (req, res, next) => {
+  const user = req.user;
+  const { id } = req.params;
+  const { stock = 1 } = req.body;
+  // step: check if seller has the product
+  const product = await findOne(productModel, { _id: id, sellerId: user._id });
+  if (!product) {
+    return successHandler({ res, message: "Product not found", status: 404 });
+  }
+  // step: check stock sutable
+  if (product.stock < stock) {
+    return successHandler({
+      res,
+      message: "Number of stock larger than you have",
+      status: 400,
+    });
+  }
+  // step: delete
+  if (product.stock == stock) {
+    await findOneAndDelete(productModel, { _id: id, sellerId: user._id });
+  } else {
+    await findOneAndUpdate(
+      productModel,
+      { _id: id, sellerId: user._id },
+      { $set: { stock: product.stock - stock } }
+    );
+  }
+  return successHandler({ res, message: "Product removed successfully" });
+};

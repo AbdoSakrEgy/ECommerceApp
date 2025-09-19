@@ -23,6 +23,13 @@ export const PaymentStatus = {
 Object.freeze(PaymentMethod);
 Object.freeze(SaleStatus);
 Object.freeze(PaymentStatus);
+export const shippingAddressSchema = new Schema({
+  street: { type: String, required: true },
+  city: { type: String, required: true },
+  state: { type: String, required: true },
+  zipCode: { type: String, required: true },
+  country: { type: String, required: true },
+});
 
 const salesSchema = new Schema(
   {
@@ -46,23 +53,30 @@ const salesSchema = new Schema(
     // Details (snapshot at time of sale)
     productName: {
       type: String,
-      required: true,
       trim: true,
+      required: true,
     },
     productImage: [{ url: { type: String, required: true } }],
-    originPrice: { type: Number, min: 0 },
-    discount: { type: Number, default: 0, min: 0, max: 100 },
+    originPrice: { type: Number, min: 0, required: true },
+    discount: { type: Number, min: 0, max: 100, required: true },
+    shippingCost: {
+      type: Number,
+      min: 0,
+      default: 0,
+      required: true,
+    },
     priceAfterDiscount: {
       type: Number,
       min: 0,
       set: (value) => originPrice - (this.originPrice * this.discount) / 100,
     },
-    shippingCost: {
+    finalPrice: {
       type: Number,
       min: 0,
-      default: 0,
+      set: (value) => {
+        return this.priceAfterDiscount + this.shippingCost;
+      },
     },
-    finalPrice: { type: Number, min: 0 },
     // Payment Info
     paymentMethod: {
       type: String,
@@ -72,7 +86,7 @@ const salesSchema = new Schema(
     saleStatus: {
       type: String,
       enum: Object.values(SaleStatus),
-      default: SaleStatus.pending,
+      default: SaleStatus.inProgress,
     },
     paymentStatus: {
       type: String,
@@ -81,20 +95,17 @@ const salesSchema = new Schema(
     },
     // Shipping Info
     shippingAddress: {
-      street: String,
-      city: String,
-      state: String,
-      zipCode: String,
-      country: String,
+      type: shippingAddressSchema,
+      required: true,
     },
-    trackingNumber: String,
+    trackingNumber: { type: String, required: true },
     // Dates
-    shippedAt: Date,
-    deliveredAt: Date,
-    cancelledAt: Date,
-    completedAt: Date,
+    // deliveredAt: Date,
+    // cancelledAt: Date,
+    // completedAt: Date,
     //! How to handle this case if same products has sale just on 1 units and customer will buy 2 units
-    quantity: Number,
+    //! handle it now buy deal diffrent prices as diffrent sales
+    quantity: { type: Number, required: true },
   },
   {
     timestamps: true,

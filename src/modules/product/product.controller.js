@@ -8,7 +8,7 @@ import { auth } from "../../middlewares/auth.middleware.js";
 const router = Router();
 
 router.get("/view-products", viewProducts);
-router.post("/search-by-productName", auth, searchByName);
-router.post("/search-by-seller", auth, searchBySeller);
+router.post("/search-by-productName/:productName", auth, searchByName);
+router.post("/search-by-seller/:sellerId", auth, searchBySeller);
 
 export default router;
